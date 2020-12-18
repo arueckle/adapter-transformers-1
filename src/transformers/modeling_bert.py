@@ -469,6 +469,7 @@ class BertEncoder(BertEncoderAdaptersMixin, nn.Module):
         output_attentions=False,
         output_hidden_states=False,
         adapter_names=None,
+        adapters_leave_out=None,
         return_dict=False,
     ):
         all_hidden_states = () if output_hidden_states else None
@@ -480,11 +481,15 @@ class BertEncoder(BertEncoderAdaptersMixin, nn.Module):
 
             layer_head_mask = head_mask[i] if head_mask is not None else None
 
+            # adjust the adapter_names per layer wrt. adapters_leave_out
+            # if the current layer should not use adapters, we set the adapter names of the current layer to None
+            layer_adapter_names = adapter_names if (adapters_leave_out is None or i not in adapters_leave_out) else None
+
             if getattr(self.config, "gradient_checkpointing", False):
 
                 def create_custom_forward(module):
                     def custom_forward(*inputs):
-                        return module(*inputs, output_attentions, adapter_names=adapter_names)
+                        return module(*inputs, output_attentions, adapter_names=layer_adapter_names)
 
                     return custom_forward
 
@@ -504,7 +509,7 @@ class BertEncoder(BertEncoderAdaptersMixin, nn.Module):
                     encoder_hidden_states,
                     encoder_attention_mask,
                     output_attentions,
-                    adapter_names=adapter_names,
+                    adapter_names=layer_adapter_names,
                 )
             hidden_states = layer_outputs[0]
             if output_attentions:
@@ -806,6 +811,7 @@ class BertModel(BertModelAdaptersMixin, BertPreTrainedModel):
         output_attentions=None,
         output_hidden_states=None,
         adapter_names=None,
+        adapters_leave_out=None,
         return_dict=None,
     ):
         r"""
@@ -882,6 +888,7 @@ class BertModel(BertModelAdaptersMixin, BertPreTrainedModel):
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             adapter_names=adapter_names,
+            adapters_leave_out=adapters_leave_out,
             return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
@@ -1465,6 +1472,7 @@ class BertForSequenceClassification(ModelWithHeadsAdaptersMixin, BertPreTrainedM
         output_attentions=None,
         output_hidden_states=None,
         adapter_names=None,
+        adapters_leave_out=None,
         return_dict=None,
     ):
         r"""
@@ -1485,6 +1493,7 @@ class BertForSequenceClassification(ModelWithHeadsAdaptersMixin, BertPreTrainedM
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states,
             adapter_names=adapter_names,
+            adapters_leave_out=adapters_leave_out,
             return_dict=return_dict,
         )
 
