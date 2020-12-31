@@ -3,7 +3,7 @@ import unittest
 import torch
 
 from transformers import BertConfig
-from transformers.adapter_composition import Fuse, Split, Stack
+from transformers.adapter_composition import Fuse, Parallel, Split, Stack
 from transformers.models.bert.modeling_bert import BertForSequenceClassification
 from transformers.testing_utils import require_torch, torch_device
 
@@ -54,3 +54,11 @@ class AdapterCompositionTest(unittest.TestCase):
         self.model.set_active_adapters(Stack("a", Split("c", "d", split_index=64), Fuse("a", "b")))
 
         self.training_pass()
+
+    def test_parallel(self):
+        self.model.set_active_adapters(Parallel("a", "b", "c", "d"))
+
+        inputs = {}
+        inputs["input_ids"] = ids_tensor((1, 128), 1000)
+        logits = self.model(**inputs).logits
+        self.assertEqual(logits.shape, (4, 2))
